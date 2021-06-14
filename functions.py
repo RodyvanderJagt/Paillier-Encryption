@@ -1,14 +1,18 @@
 import random
 import math
+from decimal import Decimal
 
 
 def checkPrime(n):
     """
     Miller-Rabin primality test.
- 
+    
     A return value of False means n is certainly not prime. A return value of
     True means n is very likely a prime.
+
+    source: https://rosettacode.org/wiki/Miller%E2%80%93Rabin_primality_test#Python
     """
+
     if n!=int(n):
         return False
     n=int(n)
@@ -40,43 +44,12 @@ def checkPrime(n):
  
     return True  
 
-def randGen(min, max):
-    rand = min + int(random.random() * (max - min))
-    return rand
-
-#Generate random odd number of N bits
-def randPrimeCandidate(N):
-    min = 2 ** (N-1) + 1
-    max = 2 ** N
-    rand = randGen(min, max)
-    if rand ^ 1 == rand + 1:
-        return randPrimeCandidate(N)
-    else:
-        return rand
-
-#Generate random prime number of N bits
-def primeGen(N):
-    while True:
-        cand = randPrimeCandidate(N)
-        if checkPrime(cand):
-            return cand
-
-#Generate two primes such that prime1 * 2 + 1 = prime2
-def doublePrimeGen(N):
-    while True:
-        pprime = primeGen(N)
-        p = pprime * 2 + 1
-        if checkPrime(p):
-            return pprime, p
-
-#Generate large prime numbers for the key
-def keyPrimeGen(N):
-    pprime, p = doublePrimeGen(N)
-    qprime, q = doublePrimeGen(N)
-    return pprime, qprime, p, q
-
-#calculate integers (x, y) such that a * x + b * y = gcd(a, b)
 def gcdExtended(a, b):
+    """ 
+    calculate integers (x, y) such that a * x + b * y = gcd(a, b)
+    Extended Euclidean algorithm
+    source: https://www.geeksforgeeks.org/euclidean-algorithms-basic-and-extended/
+    """
     # Base Case
     if a == 0 : 
         return b, 0, 1
@@ -88,6 +61,34 @@ def gcdExtended(a, b):
     y = x1
     
     return gcd, x, y
+
+#Generate random odd integer of N bits
+def randPrimeCandidate(N):
+    if type(N) is not int: return print("[randPrimeCandidate]: argument must be an integer")
+    min = 2 ** (N-1) + 1
+    max = 2 ** N - 1
+    rand = random.randint(min, max)
+    if rand ^ 1 == rand + 1:
+        return randPrimeCandidate(N)
+    else:
+        return rand
+
+#Generate random prime number of N bits
+def primeGen(N):
+    if type(N) is not int: return print("[primeGen]: argument must be an integer")
+    while True:
+        cand = randPrimeCandidate(N)
+        if checkPrime(cand):
+            return cand
+
+#Generate two primes such that prime1 * 2 + 1 = prime2
+def doublePrimeGen(N):
+    if type(N) is not int: return print("[doublePrimeGen]: argument must be an integer")
+    while True:
+        pprime = primeGen(N)
+        p = pprime * 2 + 1
+        if checkPrime(p):
+            return pprime, p
 
 # modular multiplicative inverse of a in group Z*_{b}
 def modularMultiplicativeInverse(a, b):
@@ -101,29 +102,40 @@ def privateKeyGen(l, f):
         arr.append(s)
     return arr
 
-#key generating function: 
-#argument: length of key in bits
-#returns tuple publicKey, array privateKeys 
-def keyGen(N):
-    #pprime, qprime, q, p = keyPrimeGen(int(N / 2 - 1))
+#Key generation
+def keyGen(N, t, l):
+    """
+    key generating function: 
+    argument: (integer) length of key in bits
+    returns tuple publicKey, array privateKeys 
+    """
 
-    #127 and 128 bit example primes saved for ease of use
+    if type(N) is not int: return print("[KeyGen]: argument must be an integer")
+    if t > l: return print("[keyGen]: the threshold is larger than the number of users")
+
+    pprime, p = doublePrimeGen(int(N / 2 - 1))
+    qprime, q = doublePrimeGen(int(N / 2 - 1))
+
+    """
+    127 and 128 bit example primes saved for ease of use
     pprime = 146067167902720484939517455959513366529
     qprime = 147732962320765368752842213312543326209
     p = 292134335805440969879034911919026733059
     q = 295465924641530737505684426625086652419
+    """
 
-    #n is a kappa(256)-bit number
+    #n is a kappa(N)-bit number
     n = p * q
     m = pprime * qprime
 
     #g is a generator of Z*_{n^2}
     g = n + 1
 
-    #minverse = modularMultiplicativeInverse(m, n ** 2)
-    minverse = 2492172667049954137031565815359910018386221690091877810591444830389243478938830111968672083565316215145114990253510907584709080327977278869048913324813017
+    minverse = modularMultiplicativeInverse(m, n ** 2)
+    #minverse = 2492172667049954137031565815359910018386221690091877810591444830389243478938830111968672083565316215145114990253510907584709080327977278869048913324813017
     d = m * (minverse % n)
-    
+    assert(d % n == 1)
+
     #Generate coefficients of polynomial
     def coefficientsGen(t, max):
         arr = []
@@ -132,10 +144,10 @@ def keyGen(N):
             arr.append(rand)
         return arr
 
-    #coefficients = coefficientsGen(t, n * m - 1)
-    #coefficients[0] = d
+    coefficients = coefficientsGen(t, n * m - 1)
+    coefficients[0] = d
     
-    coefficients = [296471268930673905512054365950040139586535550346638877905916191418233863167926972796368308378455241483022971141506541702673532242367572701764535025595866, 32427316371702188076291753355467151274429248783846015695625203068339964049165107082530332882221383560279366185382958866692514523987911953583496511881217, 1745469135175642066487962540270413627923483813263315124657500593026017307531864528301619224506504403598406490258315017469002896178382724251638130769133569, 938634784317705678071340187168755733214143655764454479815425870877049167754737437542142026699398832684879737308785697487931212833322053982605257539059713, 1179676158103509390900935691166704342198746382909516050996291474778133577244902308989141642765732219422448539146580815368787079970080685713883011865378817]
+    #coefficients = [296471268930673905512054365950040139586535550346638877905916191418233863167926972796368308378455241483022971141506541702673532242367572701764535025595866, 32427316371702188076291753355467151274429248783846015695625203068339964049165107082530332882221383560279366185382958866692514523987911953583496511881217, 1745469135175642066487962540270413627923483813263315124657500593026017307531864528301619224506504403598406490258315017469002896178382724251638130769133569, 938634784317705678071340187168755733214143655764454479815425870877049167754737437542142026699398832684879737308785697487931212833322053982605257539059713, 1179676158103509390900935691166704342198746382909516050996291474778133577244902308989141642765732219422448539146580815368787079970080685713883011865378817]
 
     #Polynomial with random coefficients
     def f(x):
@@ -150,23 +162,25 @@ def keyGen(N):
     return publicKey, privateKeys
 
 #Encrypt
-def encrypt(M):
-    r = randGen(2, n ** 2)
+def encrypt(M, g, n):
+    r = random.randint(2, n ** 2 - 1)
     c = ((g ** M) * (r ** n)) % (n ** 2)
     return c
 
 #Partial decrypt
-def partialDecrypt(c, privateKey):
+def partialDecrypt(c, delta, privateKey):
     ci = c ** (2 * delta * privateKey)
     return ci
 
 #Combine decrypt:
-#S array of users of length at least t, C array of partial decryptions ci
-def combineDecrypt(S, C):
+#S array of users of size at least t, C array of partial decryptions ci
+def combineDecrypt(S, C, delta, n):
+    """
     if S.length < t:
         return print("Not enough users to decrypt")
-    if S.length != C.length:
-        return print("Wrong input: unequal lengths")
+    """
+    if len(S) != len(C):
+        return print("[combineDecrypt]: arrays have unequal lengths")
 
     def lambda0(i):
         denominator = 1
@@ -185,17 +199,9 @@ def combineDecrypt(S, C):
     cprime = 1
     for index, user in enumerate(S):
         cprime *= (C[index] ** (2 * lambda0(user))) % (n ** 2)
-    cprime %= n ** 2
-    return cprime
+    cprime %= (n ** 2)
 
+    Mprime = ((cprime - 1) / n * (4 * delta^2) ^(-1) ) % n
+    return Mprime
 
-t = 5
-l = 9
-delta = math.factorial(l)
-
-
-publicKey, privateKeys = keyGen(256)
-
-g = publicKey[2]
-n = publicKey[3]
 
