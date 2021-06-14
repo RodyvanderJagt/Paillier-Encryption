@@ -62,6 +62,7 @@ def gcdExtended(a, b):
     
     return gcd, x, y
 
+
 #Generate random odd integer of N bits
 def randPrimeCandidate(N):
     if type(N) is not int: return print("[randPrimeCandidate]: argument must be an integer")
@@ -92,7 +93,7 @@ def doublePrimeGen(N):
 
 # modular multiplicative inverse of a in group Z*_{b}
 def modularMultiplicativeInverse(a, b):
-    return gcdExtended(a, b)[1]
+    return gcdExtended(a, b)[1] % b
 
 #Generate l private keys
 def privateKeyGen(l, f):
@@ -131,7 +132,7 @@ def keyGen(N, t, l):
     #g is a generator of Z*_{n^2}
     g = n + 1
 
-    minverse = modularMultiplicativeInverse(m, n ** 2)
+    minverse = pow(m, -1, n ** 2)
     #minverse = 2492172667049954137031565815359910018386221690091877810591444830389243478938830111968672083565316215145114990253510907584709080327977278869048913324813017
     d = m * (minverse % n)
     assert(d % n == 1)
@@ -140,7 +141,7 @@ def keyGen(N, t, l):
     def coefficientsGen(t, max):
         arr = []
         for i in range(t):
-            rand = 1 + int(random.random() * max)
+            rand = random.randint(1, max)
             arr.append(rand)
         return arr
 
@@ -161,47 +162,37 @@ def keyGen(N, t, l):
 
     return publicKey, privateKeys
 
-#Encrypt
 def encrypt(M, g, n):
     r = random.randint(2, n ** 2 - 1)
-    c = ((g ** M) * (r ** n)) % (n ** 2)
+    c = (pow(g, M, n ** 2) * pow(r, n, n ** 2)) % (n ** 2)
     return c
 
-#Partial decrypt
-def partialDecrypt(c, delta, privateKey):
-    ci = c ** (2 * delta * privateKey)
+def partialDecrypt(c, delta, privateKey, n):
+    ci = pow(c, 2 * delta * privateKey, n ** 2)
     return ci
 
-#Combine decrypt:
 #S array of users of size at least t, C array of partial decryptions ci
 def combineDecrypt(S, C, delta, n):
-    """
-    if S.length < t:
-        return print("Not enough users to decrypt")
-    """
     if len(S) != len(C):
         return print("[combineDecrypt]: arrays have unequal lengths")
 
     def lambda0(i):
         denominator = 1
-        for j in S:
-            if j == i: continue
-            denominator *= (i - j)
-        
         result = 1
         for j in S:
             if j == i: continue
+            denominator *= (i - j)
             result *= (-j)
-
-        result *= (delta / denominator)
+        result *= int(delta / denominator)
         return result
-
+    
     cprime = 1
     for index, user in enumerate(S):
-        cprime *= (C[index] ** (2 * lambda0(user))) % (n ** 2)
+        cprime *= pow(C[index], 2 * lambda0(user), n ** 2)
     cprime %= (n ** 2)
 
-    Mprime = ((cprime - 1) / n * (4 * delta^2) ^(-1) ) % n
+    Mprime = (int((cprime - 1) / n) * pow(4 * delta ** 2, -1, n ** 2)) % n
+
     return Mprime
 
 

@@ -1,6 +1,6 @@
 import unittest
 from functions import checkPrime, primeGen, modularMultiplicativeInverse, gcdExtended, keyGen, encrypt, combineDecrypt, partialDecrypt
-from math import comb, factorial
+from math import factorial
 
 class TestPrimeGen(unittest.TestCase):
     test_N = 10
@@ -25,42 +25,63 @@ class TestModularMultiplicativeInverse(unittest.TestCase):
         for pair in zip(test_a, test_b):
             a = pair[0]
             b = pair[1]
-            inverse_of_a = modularMultiplicativeInverse(a, b)
+            
             
             if gcdExtended(a, b)[0] == 1:
+                inverse_of_a = modularMultiplicativeInverse(a, b)
+                self.assertEqual(inverse_of_a, pow(a, -1, b))
                 self.assertEqual((inverse_of_a * a) % b, 1, [a, b])
+                
 
 class TestEncryptDecrypt(unittest.TestCase):
     def test_single_user(self):
-        test_N = 11
+        test_N = 128
         test_l = 1
         test_t = 1
-        test_M = 4087
+        test_M = 104
 
-        publicKey, privateKey = keyGen(test_N, test_t, test_l)
-        g = publicKey[2]
-        n = publicKey[3]
-        delta = factorial(test_l)
+        for index in range(1):
+            publicKey, privateKeys = keyGen(test_N, test_t, test_l)
+            g = publicKey[2]
+            n = publicKey[3]
+            delta = factorial(test_l)
 
-        encrypted_M = encrypt(test_M, g, n)
-        self.assertNotEqual(test_M, encrypted_M)
+            encrypted_M = encrypt(test_M, g, n)
+            self.assertNotEqual(test_M, encrypted_M)
 
-        print(encrypted_M)
-        print(privateKey)
-
+            partialDecryptions = []
+            users = list(range(test_l))
+            for user in users:
+                partialDecryption = partialDecrypt(encrypted_M, delta, privateKeys[user], n)
+                partialDecryptions.append(partialDecryption)
+            
+            decrypted_M_0 = combineDecrypt([users[0]], [partialDecryptions[0]], delta, n)
+            
+            self.assertEqual(test_M, decrypted_M_0, [privateKeys[0], encrypted_M, partialDecryption, decrypted_M_0])
         
-        
-        partialDecrypted_M = partialDecrypt(encrypted_M, delta, privateKey[0])
-        print(partialDecrypted_M)
-   
-        users = [0]
-        partialDecryptions = [partialDecrypted_M]
-        decrypted_M = combineDecrypt(users, partialDecryptions, delta, n)
-        print(decrypted_M)
+    def test_multiple_users(self):
+        test_N = 128
+        test_l = 6
+        test_t = 4
+        test_M = 807
 
-        return 0
+        for index in range(1):
+            publicKey, privateKeys = keyGen(test_N, test_t, test_l)
+            g = publicKey[2]
+            n = publicKey[3]
+            delta = factorial(test_l)
 
-
+            encrypted_M = encrypt(test_M, g, n)
+            self.assertNotEqual(test_M, encrypted_M)
+    
+            partialDecryptions = []
+            users = list(range(1, test_l + 1))
+            for index, user in enumerate(users):
+                partialDecryption = partialDecrypt(encrypted_M, delta, privateKeys[index], n)
+                partialDecryptions.append(partialDecryption)
+            
+            decrypted_M = combineDecrypt(users, partialDecryptions, delta, n)            
+            self.assertEqual(test_M, decrypted_M, [privateKeys, encrypted_M, partialDecryptions, decrypted_M])
 
 if __name__ == '__main__':
     unittest.main()
