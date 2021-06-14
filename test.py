@@ -1,5 +1,5 @@
 import unittest
-from functions import checkPrime, primeGen, modularMultiplicativeInverse, gcdExtended, keyGen, encrypt, combineDecrypt, partialDecrypt
+from functions import SecureAdd, checkPrime, primeGen, keyGen, encrypt, combineDecrypt, partialDecrypt
 from math import factorial
 
 class TestPrimeGen(unittest.TestCase):
@@ -16,22 +16,6 @@ class TestPrimeGen(unittest.TestCase):
 
         self.assertGreater(randPrime, lowerLimit)
         self.assertLess(randPrime, upperLimit)
-
-class TestModularMultiplicativeInverse(unittest.TestCase):
-    def test_inverse(self): 
-        test_a = [1236, 4215, 5125, 7376, 90539, 925010]
-        test_b = [5904, 6042, 41923, 31892, 401293, 8410381]
-
-        for pair in zip(test_a, test_b):
-            a = pair[0]
-            b = pair[1]
-            
-            
-            if gcdExtended(a, b)[0] == 1:
-                inverse_of_a = modularMultiplicativeInverse(a, b)
-                self.assertEqual(inverse_of_a, pow(a, -1, b))
-                self.assertEqual((inverse_of_a * a) % b, 1, [a, b])
-                
 
 class TestEncryptDecrypt(unittest.TestCase):
     def test_single_user(self):
@@ -63,7 +47,7 @@ class TestEncryptDecrypt(unittest.TestCase):
         test_N = 128
         test_l = 6
         test_t = 4
-        test_M = 807
+        test_M = 1604
 
         for index in range(1):
             publicKey, privateKeys = keyGen(test_N, test_t, test_l)
@@ -73,13 +57,41 @@ class TestEncryptDecrypt(unittest.TestCase):
 
             encrypted_M = encrypt(test_M, g, n)
             self.assertNotEqual(test_M, encrypted_M)
-    
+
             partialDecryptions = []
             users = list(range(1, test_l + 1))
             for index, user in enumerate(users):
                 partialDecryption = partialDecrypt(encrypted_M, delta, privateKeys[index], n)
                 partialDecryptions.append(partialDecryption)
-            
+            decrypted_M = combineDecrypt(users, partialDecryptions, delta, n)            
+            self.assertEqual(test_M, decrypted_M, [privateKeys, encrypted_M, partialDecryptions, decrypted_M])
+
+class TestSecureAdd(unittest.TestCase):
+    def test_two_messages(self):
+        message1 = 6542
+        message2 = 100002
+        test_M = message1 + message2
+
+        test_N = 128
+        test_l = 3
+        test_t = 2
+
+        for index in range(1):
+            publicKey, privateKeys = keyGen(test_N, test_t, test_l)
+            g = publicKey[2]
+            n = publicKey[3]
+            delta = factorial(test_l)
+            encrypted_message1 = encrypt(message1, g, n)
+            encrypted_message2 = encrypt(message2, g, n)
+
+            encrypted_M = SecureAdd(encrypted_message1, encrypted_message2, n)
+            self.assertNotEqual(test_M, encrypted_M)
+
+            partialDecryptions = []
+            users = list(range(1, test_l + 1))
+            for index, user in enumerate(users):
+                partialDecryption = partialDecrypt(encrypted_M, delta, privateKeys[index], n)
+                partialDecryptions.append(partialDecryption)
             decrypted_M = combineDecrypt(users, partialDecryptions, delta, n)            
             self.assertEqual(test_M, decrypted_M, [privateKeys, encrypted_M, partialDecryptions, decrypted_M])
 

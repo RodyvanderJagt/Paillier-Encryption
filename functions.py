@@ -44,25 +44,6 @@ def checkPrime(n):
  
     return True  
 
-def gcdExtended(a, b):
-    """ 
-    calculate integers (x, y) such that a * x + b * y = gcd(a, b)
-    Extended Euclidean algorithm
-    source: https://www.geeksforgeeks.org/euclidean-algorithms-basic-and-extended/
-    """
-    # Base Case
-    if a == 0 : 
-        return b, 0, 1
-            
-    gcd, x1, y1 = gcdExtended(b%a, a)
-    
-    # Update x and y using results of recursive call
-    x = y1 - (b//a) * x1
-    y = x1
-    
-    return gcd, x, y
-
-
 #Generate random odd integer of N bits
 def randPrimeCandidate(N):
     if type(N) is not int: return print("[randPrimeCandidate]: argument must be an integer")
@@ -90,10 +71,6 @@ def doublePrimeGen(N):
         p = pprime * 2 + 1
         if checkPrime(p):
             return pprime, p
-
-# modular multiplicative inverse of a in group Z*_{b}
-def modularMultiplicativeInverse(a, b):
-    return gcdExtended(a, b)[1] % b
 
 #Generate l private keys
 def privateKeyGen(l, f):
@@ -195,4 +172,5 @@ def combineDecrypt(S, C, delta, n):
 
     return Mprime
 
-
+def SecureAdd(ciphertext1, ciphertext2, n):
+    return (ciphertext1 * ciphertext2) % (n ** 2)
