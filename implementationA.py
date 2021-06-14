@@ -13,28 +13,32 @@ trusted_thirdParty = thirdParty(256, 5, 9)
 #Give user publicKey and privateKey
 trusted_thirdParty.giveKeys(users)
 
-#Tell all users to encrypt
-for u in users:
-    u.privateEncrypt()
+def collaborativeDecryption(users):
+    #Tell all users to encrypt
+    for u in users:
+        u.privateEncrypt()
 
-#Tell all users to send their privateEncrypt
-for u in users:
-    u.sendCipherText(users)
+    #Tell all users to send their privateEncrypt
+    for u in users:
+        u.sendCipherText(users)
 
-#Tell all users to partial decrypt using their private key
-for u in users:
-    u.privatePartialDecrypt()
+    #Tell all users to partial decrypt using their private key
+    for u in users:
+        u.privatePartialDecrypt()
 
-#Tell all users to send their partial decrypted text
-for u in users:
-    u.sendPartialDecrypt(users)
+    #Tell all users to send their partial decrypted text
+    for u in users:
+        u.sendPartialDecrypt(users)
 
-#Tell all users to decrypt the final message
-for u in users:
-    u.totalDecrypt()
+    #Tell all users to decrypt the final message
+    for u in users:
+        u.totalDecrypt()
+    
+    return users[0].get_totalDecrypt()
 
-"""
+collaborativeDecryption(users)
+
 for u in users:
     print(u.get_totalDecrypt())
-"""
+
     

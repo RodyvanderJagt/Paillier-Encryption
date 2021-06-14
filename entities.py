@@ -1,14 +1,29 @@
 from functions import SecureAdd, keyGen, encrypt, partialDecrypt, combineDecrypt
 from math import factorial
+import random
 
 class user:
     def __init__(self, index, privateValue):
         self.index = index
         self.privateValue = privateValue
+        self.representative = False
+        self.totalPlaintext = 0
 
     def set_keys(self, publicKey, privateKey = None):
         self.publicKey = publicKey
         self.privateKey = privateKey
+
+    def get_index(self):
+        return self.index
+
+    def set_representative(self, bool):
+        self.representative = bool
+
+    def get_representative(self):
+        return self.representative
+    
+    def get_plaintext(self):
+        return self.totalPlaintext
 
     #Encrypt own privateValue
     def privateEncrypt(self):
@@ -16,23 +31,44 @@ class user:
         n = self.publicKey[3]
         self.privateCiphertext = encrypt(self.privateValue, g, n)
         self.totalCiphertext = self.privateCiphertext
+
+        #print('decrypt %d', self.totalCiphertext)
     
     #Send encrypted private values (ciphertext) to other users
     def sendCipherText(self, users):
         if self.privateCiphertext is None: return print("Something went wrong: I do not have a privateCiphertext")
+        #print('sending %d', self.privateCiphertext)
         for u in users:
             if (u == self): continue
-            u.receiveCiphertext(self.privateCiphertext)
+            u.receiveAndAddCiphertext(self.privateCiphertext)
 
     #receive a ciphertext from another user to add to totalCiphertext
-    def receiveCiphertext(self, receivedCiphertext):
+    def receiveAndAddCiphertext(self, receivedCiphertext):
         if receivedCiphertext is None: return print("Something went wrong: I did not receive a ciphertext")
         n = self.publicKey[3]
         self.totalCiphertext = SecureAdd(self.totalCiphertext, receivedCiphertext, n)
 
+    #send a totalciphertext
+    def sendTotalCiphertext(self, users):
+        for u in users:
+            if u == self: continue
+            u.receiveTotalCiphertext(self.totalCiphertext)
+        
+    #send plaintext
+    def sendPlaintext(self, users):
+        for u in users:
+            u.receiveAndAddPlaintext(self.decryptedMessage)
+
+    def receiveAndAddPlaintext(self, plaintext):
+        self.totalPlaintext += plaintext
+
+    #receive a totalciphertext
+    def receiveTotalCiphertext(self, receivedTotalCiphertext):
+        self.totalCiphertext = receivedTotalCiphertext
+
     #partial decrypt of totalCipherText
     def privatePartialDecrypt(self):
-        if self.totalCiphertext is None: return print("Something went wrong: I don't have a totalCiphertext")
+        if self.totalCiphertext is None: return print("Something went wrong: I don't have a totalCiphertext" + self.index)
         delta = factorial(self.publicKey[1])
         n = self.publicKey[3]
         self.partialDecryptedText = partialDecrypt(self.totalCiphertext, delta, self.privateKey, n)
@@ -73,6 +109,20 @@ class thirdParty:
         publicKey, privateKeys = keyGen(self.N, self.t, self.l)
         for index, user in enumerate(users):
             user.set_keys(publicKey, privateKeys[index])
+    
+    def clusterUsers(self, users, clusterSize):
+        if len(users) % clusterSize != 0: return print("Cluster size must divide the number of users")
+        random.shuffle(users)
+
+        userClusters = []
+        for cIndex in range(0, len(users), clusterSize):
+            cluster = users[cIndex:cIndex + clusterSize]
+            userClusters.append(cluster)
+        return userClusters
+
+    def designateRepresentative(self, userClusters):
+        for cluster in userClusters:
+            cluster[0].set_representative(True)
 
 def userFactory(l, privateValues):
     users = []
